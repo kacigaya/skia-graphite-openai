@@ -77,9 +77,40 @@ do shell script "open -n -a Codex --args --disable-features=SkiaGraphite"
 4. Save it as `Codex Fixed.app` in `/Applications` or `~/Applications`.
 5. Launch `Codex Fixed.app` instead of editing `Codex.app`.
 
+### Codex app global launcher fix
+
+Chrome policy files do not apply to Codex. Codex is an Electron app, so the reliable process-wide fix is a Chromium command-line switch. To make normal Dock, Finder, and Spotlight launches use the switch, replace the app launcher with a small shim and keep the original binary as `Codex.real`:
+
+```bash
+APP="/Applications/Codex.app"
+BIN="$APP/Contents/MacOS/Codex"
+REAL="$APP/Contents/MacOS/Codex.real"
+
+sudo test -f "$REAL" || sudo cp -p "$BIN" "$REAL"
+
+sudo tee "$BIN" >/dev/null <<'SH'
+#!/bin/sh
+exec "$(dirname "$0")/Codex.real" --disable-features=SkiaGraphite "$@"
+SH
+
+sudo chmod 755 "$BIN"
+sudo codesign --force --deep --sign - "$APP"
+```
+
+Quit Codex fully, then reopen `/Applications/Codex.app` normally. This changes the signature to an ad-hoc signature because the app bundle was modified. A Codex update can overwrite the shim; rerun the commands after updating if the issue returns.
+
+Rollback by reinstalling Codex, or restore the original binary:
+
+```bash
+APP="/Applications/Codex.app"
+sudo cp -p "$APP/Contents/MacOS/Codex.real" "$APP/Contents/MacOS/Codex"
+sudo rm "$APP/Contents/MacOS/Codex.real"
+sudo codesign --force --deep --sign - "$APP"
+```
+
 ### System-wide (all Chromium binaries)
 
-For apps that don't honor `ELECTRON_EXTRA_LAUNCH_ARGS`, set the Chromium policy file:
+For managed Chrome-family browsers, set the Chromium policy file:
 
 ```bash
 mkdir -p "/Library/Application Support/Google/Chrome/policies/managed"
@@ -88,7 +119,7 @@ cat > "/Library/Application Support/Google/Chrome/policies/managed/disable-graph
 EOF
 ```
 
-Replicate the path for `BraveSoftware/Brave-Browser`, `Microsoft/Edge`, etc.
+Replicate the path for `BraveSoftware/Brave-Browser`, `Microsoft/Edge`, etc. This is a browser policy path, not a Codex or generic Electron policy.
 
 ## Verification
 
@@ -103,3 +134,10 @@ Tracked upstream as a Skia/Chromium issue against the Metal backend. Expected to
 ## Rollback
 
 When the upstream fix lands (Chromium 14x), reset the flag to `Default` and remove the Electron env var to re-enable Graphite for the performance benefits (lower CPU, better HDR, faster canvas).
+
+## Sources
+
+- Chromium command-line flags: <https://www.chromium.org/developers/how-tos/run-chromium-with-flags>
+- Electron command-line switches API: <https://www.electronjs.org/docs/latest/api/command-line-switches>
+- Electron environment variables: <https://www.electronjs.org/docs/latest/api/environment-variables>
+- Chrome enterprise policy list: <https://chromeenterprise.google/policies/>
