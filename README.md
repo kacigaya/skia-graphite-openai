@@ -1,4 +1,4 @@
-# Skia Graphite Compositing Bug — Chromium on macOS
+# Skia Graphite Compositing Bug - Chromium on macOS
 
 A rendering glitch affecting all Chromium-based browsers and Electron apps on macOS 15 (Sequoia) / 26 (Tahoe), including the Codex desktop app and ChatGPT web client.
 
@@ -8,9 +8,9 @@ Windows fail to repaint correctly: portions of the desktop wallpaper, other apps
 
 ## Root Cause
 
-Chromium 130+ ships with **Skia Graphite** enabled by default — the new GPU rendering backend that replaces Ganesh. On macOS, Graphite uses **Metal** for surface allocation and presentation. A synchronization bug between Graphite's `MTLCommandBuffer` lifecycle and `CAMetalLayer` drawable presentation causes the compositor to display stale or uninitialized framebuffer regions instead of the freshly rasterized layer.
+Chromium 130+ ships with **Skia Graphite** enabled by default: the new GPU rendering backend that replaces Ganesh. On macOS, Graphite uses **Metal** for surface allocation and presentation. A synchronization bug between Graphite's `MTLCommandBuffer` lifecycle and `CAMetalLayer` drawable presentation causes the compositor to display stale or uninitialized framebuffer regions instead of the freshly rasterized layer.
 
-This is a system-level interaction between Chromium's renderer and macOS WindowServer — not a per-app misconfiguration. Disabling per-browser hardware acceleration does **not** fix it because Graphite still owns the GPU path when accel is on, and software rendering tanks performance.
+This is a system-level interaction between Chromium's renderer and macOS WindowServer, not a per-app misconfiguration. Disabling per-browser hardware acceleration does **not** fix it because Graphite still owns the GPU path when accel is on, and software rendering tanks performance.
 
 ## Fix
 
@@ -27,7 +27,7 @@ brave://flags/#skia-graphite      →  Disabled
 edge://flags/#skia-graphite       →  Disabled
 ```
 
-Relaunch. Verify at `chrome://gpu` — the **Graphite** line should read `Disabled`.
+Relaunch. Verify at `chrome://gpu`: the **Graphite** line should read `Disabled`.
 
 ### Electron apps (Codex, ChatGPT desktop, Slack, VS Code, Discord, …)
 
@@ -37,13 +37,42 @@ Launch with the disable flag:
 open -a Codex --args --disable-features=SkiaGraphite
 ```
 
-Persistent across launches — set the Electron environment variable in your shell profile:
+For persistent launches, first try setting the Electron environment variable in your shell profile:
 
 ```bash
 # ~/.zshrc
 export ELECTRON_EXTRA_LAUNCH_ARGS="--disable-features=SkiaGraphite"
 source ~/.zshrc
 ```
+
+If that does not work, the app is probably not inheriting shell environment variables or does not honor `ELECTRON_EXTRA_LAUNCH_ARGS`.
+
+Add a terminal alias instead:
+
+```bash
+# ~/.zshrc
+alias codex-fixed='open -n -a Codex --args --disable-features=SkiaGraphite'
+source ~/.zshrc
+```
+
+Then launch Codex with:
+
+```bash
+codex-fixed
+```
+
+For a Finder, Spotlight, or Dock launcher, create a wrapper app with Script Editor:
+
+1. Open **Script Editor**.
+2. Paste this script:
+
+```applescript
+do shell script "open -n -a Codex --args --disable-features=SkiaGraphite"
+```
+
+3. Export it with format **Application**.
+4. Save it as `Codex Fixed.app` in `/Applications` or `~/Applications`.
+5. Launch `Codex Fixed.app` instead of editing `Codex.app`.
 
 ### System-wide (all Chromium binaries)
 
