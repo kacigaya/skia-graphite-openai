@@ -42,6 +42,7 @@ Persistent across launches — set the Electron environment variable in your she
 ```bash
 # ~/.zshrc
 export ELECTRON_EXTRA_LAUNCH_ARGS="--disable-features=SkiaGraphite"
+source ~/.zshrc
 ```
 
 ### System-wide (all Chromium binaries)
