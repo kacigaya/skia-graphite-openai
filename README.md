@@ -1,6 +1,9 @@
-# Skia Graphite Compositing Bug - Chromium on macOS
+<h1 align="center">Skia Graphite Compositing Bug - Chromium on macOS</h1>
 
-A rendering glitch affecting all Chromium-based browsers and Electron apps on macOS 15 (Sequoia) / 26 (Tahoe), including the Codex desktop app and ChatGPT web client.
+<p align="center">
+   <strong>A rendering glitch affecting all Chromium-based browsers and Electron apps on macOS 15 (Sequoia) / 26 (Tahoe), including the Codex desktop app and ChatGPT web client.</strong><br>
+   <em>A GPU rendering synchronization bug causing visual corruption on macOS—and how to fix it.</em>
+</p>
 
 ## Symptom
 
