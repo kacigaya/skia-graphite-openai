@@ -79,33 +79,33 @@ do shell script "open -n -a Codex --args --disable-features=SkiaGraphite"
 
 ### Codex app global launcher fix
 
-Chrome policy files do not apply to Codex. Codex is an Electron app, so the reliable process-wide fix is a Chromium command-line switch. To make normal Dock, Finder, and Spotlight launches use the switch, replace the app launcher with a small shim and keep the original binary as `Codex.real`:
+Chrome policy files do not apply to Codex. Codex is an Electron app, so the reliable process-wide fix is a Chromium command-line switch. To make normal Dock, Finder, and Spotlight launches use the switch, use the helper script to replace the app launcher with a small shim and keep the original binary as `Codex.real`.
+
+Check the current state:
 
 ```bash
-APP="/Applications/Codex.app"
-BIN="$APP/Contents/MacOS/Codex"
-REAL="$APP/Contents/MacOS/Codex.real"
-
-sudo test -f "$REAL" || sudo cp -p "$BIN" "$REAL"
-
-sudo tee "$BIN" >/dev/null <<'SH'
-#!/bin/sh
-exec "$(dirname "$0")/Codex.real" --disable-features=SkiaGraphite "$@"
-SH
-
-sudo chmod 755 "$BIN"
-sudo codesign --force --deep --sign - "$APP"
+scripts/codex-global-launcher-fix.sh status
 ```
 
-Quit Codex fully, then reopen `/Applications/Codex.app` normally. This changes the signature to an ad-hoc signature because the app bundle was modified. A Codex update can overwrite the shim; rerun the commands after updating if the issue returns.
+Install or refresh the shim:
+
+```bash
+scripts/codex-global-launcher-fix.sh install
+```
+
+Quit Codex fully, then reopen `/Applications/Codex.app` normally. The script uses `sudo` for app bundle changes, reads the launcher name from `Contents/Info.plist`, and re-signs the modified bundle with an ad-hoc signature. A Codex update can overwrite the shim; rerun `scripts/codex-global-launcher-fix.sh install` after updating if the issue returns.
+
+If Codex is installed somewhere else, pass the app bundle path:
+
+```bash
+scripts/codex-global-launcher-fix.sh status --app "$HOME/Applications/Codex.app"
+scripts/codex-global-launcher-fix.sh install --app "$HOME/Applications/Codex.app"
+```
 
 Rollback by reinstalling Codex, or restore the original binary:
 
 ```bash
-APP="/Applications/Codex.app"
-sudo cp -p "$APP/Contents/MacOS/Codex.real" "$APP/Contents/MacOS/Codex"
-sudo rm "$APP/Contents/MacOS/Codex.real"
-sudo codesign --force --deep --sign - "$APP"
+scripts/codex-global-launcher-fix.sh rollback
 ```
 
 ### System-wide (all Chromium binaries)
